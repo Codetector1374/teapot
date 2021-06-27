@@ -8,6 +8,7 @@
 // std lib headers
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace teapot {
 
@@ -16,10 +17,11 @@ class TpSwapChain {
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
   TpSwapChain(TpDevice &deviceRef, VkExtent2D windowExtent);
+  TpSwapChain(TpDevice &deviceRef, VkExtent2D windowExtent, std::shared_ptr<TpSwapChain> previous);
   ~TpSwapChain();
 
   TpSwapChain(const TpSwapChain &) = delete;
-  void operator=(const TpSwapChain &) = delete;
+  TpSwapChain operator=(const TpSwapChain &) = delete;
 
   VkFramebuffer getFrameBuffer(int index) { return swapChainFramebuffers[index]; }
   VkRenderPass getRenderPass() { return renderPass; }
@@ -39,6 +41,7 @@ class TpSwapChain {
   VkResult submitCommandBuffers(const VkCommandBuffer *buffers, uint32_t *imageIndex);
 
  private:
+  void init();
   void createSwapChain();
   void createImageViews();
   void createDepthResources();
@@ -69,6 +72,7 @@ class TpSwapChain {
   VkExtent2D windowExtent;
 
   VkSwapchainKHR swapChain;
+  std::shared_ptr<TpSwapChain> oldSwapchain;
 
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;

@@ -1,4 +1,5 @@
 #include "tp_pipeline.h"
+#include "tp_model.h"
 
 // std
 #include <cassert>
@@ -13,14 +14,14 @@ TpPipeline::TpPipeline(
         const std::string& vertFilepath,
         const std::string& fragFilepath,
         const PipelineConfigInfo& configInfo)
-    : lveDevice{device} {
+    : tpDevice{device} {
   createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
 }
 
 TpPipeline::~TpPipeline() {
-  vkDestroyShaderModule(lveDevice.device(), vertShaderModule, nullptr);
-  vkDestroyShaderModule(lveDevice.device(), fragShaderModule, nullptr);
-  vkDestroyPipeline(lveDevice.device(), graphicsPipeline, nullptr);
+  vkDestroyShaderModule(tpDevice.device(), vertShaderModule, nullptr);
+  vkDestroyShaderModule(tpDevice.device(), fragShaderModule, nullptr);
+  vkDestroyPipeline(tpDevice.device(), graphicsPipeline, nullptr);
 }
 
 std::vector<char> TpPipeline::readFile(const std::string& filepath) {
@@ -73,12 +74,15 @@ void TpPipeline::createGraphicsPipeline(
   shaderStages[1].pNext = nullptr;
   shaderStages[1].pSpecializationInfo = nullptr;
 
+  auto bindingDescs = TpModel::Vertex::getBindingDescriptions();
+  auto attrDescs = TpModel::Vertex::getAttributeDescriptions();
+
   VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
   vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertexInputInfo.vertexAttributeDescriptionCount = 0;
-  vertexInputInfo.vertexBindingDescriptionCount = 0;
-  vertexInputInfo.pVertexAttributeDescriptions = nullptr;
-  vertexInputInfo.pVertexBindingDescriptions = nullptr;
+  vertexInputInfo.vertexAttributeDescriptionCount = attrDescs.size();
+  vertexInputInfo.vertexBindingDescriptionCount = bindingDescs.size();
+  vertexInputInfo.pVertexAttributeDescriptions = attrDescs.data();
+  vertexInputInfo.pVertexBindingDescriptions = bindingDescs.data();
 
   VkGraphicsPipelineCreateInfo pipelineInfo{};
   pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -91,7 +95,7 @@ void TpPipeline::createGraphicsPipeline(
   pipelineInfo.pMultisampleState = &configInfo.multisampleInfo;
   pipelineInfo.pColorBlendState = &configInfo.colorBlendInfo;
   pipelineInfo.pDepthStencilState = &configInfo.depthStencilInfo;
-  pipelineInfo.pDynamicState = nullptr;
+  pipelineInfo.pDynamicState = &configInfo.dynamicStateInfo;
 
   pipelineInfo.layout = configInfo.pipelineLayout;
   pipelineInfo.renderPass = configInfo.renderPass;
@@ -101,7 +105,7 @@ void TpPipeline::createGraphicsPipeline(
   pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
   if (vkCreateGraphicsPipelines(
-          lveDevice.device(),
+          tpDevice.device(),
           VK_NULL_HANDLE,
           1,
           &pipelineInfo,
@@ -117,7 +121,7 @@ void TpPipeline::createShaderModule(const std::vector<char>& code, VkShaderModul
   createInfo.codeSize = code.size();
   createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-  if (vkCreateShaderModule(lveDevice.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
+  if (vkCreateShaderModule(tpDevice.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
     throw std::runtime_error("failed to create shader module");
   }
 }
@@ -127,26 +131,16 @@ void TpPipeline::bind(VkCommandBuffer commandBuffer) {
 }
 
 void TpPipeline::defaultPipelineConfigInfo(
-    PipelineConfigInfo& configInfo, uint32_t width, uint32_t height) {
+    PipelineConfigInfo& configInfo) {
   configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
   configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
   configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 
-  configInfo.viewport.x = 0.0f;
-  configInfo.viewport.y = 0.0f;
-  configInfo.viewport.width = static_cast<float>(width);
-  configInfo.viewport.height = static_cast<float>(height);
-  configInfo.viewport.minDepth = 0.0f;
-  configInfo.viewport.maxDepth = 1.0f;
-
-  configInfo.scissor.offset = {0, 0};
-  configInfo.scissor.extent = {width, height};
-
   configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
   configInfo.viewportInfo.viewportCount = 1;
-  configInfo.viewportInfo.pViewports = &configInfo.viewport;
+  configInfo.viewportInfo.pViewports = nullptr;
   configInfo.viewportInfo.scissorCount = 1;
-  configInfo.viewportInfo.pScissors = &configInfo.scissor;
+  configInfo.viewportInfo.pScissors = nullptr;
 
   configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;
@@ -199,6 +193,13 @@ void TpPipeline::defaultPipelineConfigInfo(
   configInfo.depthStencilInfo.stencilTestEnable = VK_FALSE;
   configInfo.depthStencilInfo.front = {};  // Optional
   configInfo.depthStencilInfo.back = {};   // Optional
+
+  configInfo.dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+  configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+  configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
+  configInfo.dynamicStateInfo.dynamicStateCount =
+          static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
+  configInfo.dynamicStateInfo.flags = 0;
 }
 
 }  // namespace teapot

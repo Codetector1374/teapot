@@ -13,7 +13,18 @@
 namespace teapot {
 
 TpSwapChain::TpSwapChain(TpDevice &deviceRef, VkExtent2D extent)
-    : device{deviceRef}, windowExtent{extent} {
+        : device{deviceRef}, windowExtent{extent} {
+  init();
+}
+
+
+TpSwapChain::TpSwapChain(TpDevice &deviceRef, VkExtent2D extent, std::shared_ptr<TpSwapChain> previous) :
+        device{deviceRef}, windowExtent{extent}, oldSwapchain{previous} {
+  init();
+  oldSwapchain = nullptr;
+}
+
+void TpSwapChain::init() {
   createSwapChain();
   createImageViews();
   createRenderPass();
@@ -55,19 +66,19 @@ TpSwapChain::~TpSwapChain() {
 
 VkResult TpSwapChain::acquireNextImage(uint32_t *imageIndex) {
   vkWaitForFences(
-      device.device(),
-      1,
-      &inFlightFences[currentFrame],
-      VK_TRUE,
-      std::numeric_limits<uint64_t>::max());
+          device.device(),
+          1,
+          &inFlightFences[currentFrame],
+          VK_TRUE,
+          std::numeric_limits<uint64_t>::max());
 
   VkResult result = vkAcquireNextImageKHR(
-      device.device(),
-      swapChain,
-      std::numeric_limits<uint64_t>::max(),
-      imageAvailableSemaphores[currentFrame],  // must be a not signaled semaphore
-      VK_NULL_HANDLE,
-      imageIndex);
+          device.device(),
+          swapChain,
+          std::numeric_limits<uint64_t>::max(),
+          imageAvailableSemaphores[currentFrame],  // must be a not signaled semaphore
+          VK_NULL_HANDLE,
+          imageIndex);
 
   return result;
 }
@@ -162,7 +173,11 @@ void TpSwapChain::createSwapChain() {
   createInfo.presentMode = presentMode;
   createInfo.clipped = VK_TRUE;
 
-  createInfo.oldSwapchain = VK_NULL_HANDLE;
+  if (oldSwapchain == nullptr) {
+    createInfo.oldSwapchain = VK_NULL_HANDLE;
+  } else {
+    createInfo.oldSwapchain = oldSwapchain->swapChain;
+  }
 
   if (vkCreateSwapchainKHR(device.device(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
     throw std::runtime_error("failed to create swap chain!");
@@ -311,10 +326,10 @@ void TpSwapChain::createDepthResources() {
     imageInfo.flags = 0;
 
     device.createImageWithInfo(
-        imageInfo,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        depthImages[i],
-        depthImageMemorys[i]);
+            imageInfo,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            depthImages[i],
+            depthImageMemorys[i]);
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -348,9 +363,9 @@ void TpSwapChain::createSyncObjects() {
 
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     if (vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) !=
-            VK_SUCCESS ||
+        VK_SUCCESS ||
         vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) !=
-            VK_SUCCESS ||
+        VK_SUCCESS ||
         vkCreateFence(device.device(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
       throw std::runtime_error("failed to create synchronization objects for a frame!");
     }
@@ -358,9 +373,9 @@ void TpSwapChain::createSyncObjects() {
 }
 
 VkSurfaceFormatKHR TpSwapChain::chooseSwapSurfaceFormat(
-    const std::vector<VkSurfaceFormatKHR> &availableFormats) {
+        const std::vector<VkSurfaceFormatKHR> &availableFormats) {
   for (const auto &availableFormat : availableFormats) {
-    if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
+    if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
         availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
       return availableFormat;
     }
@@ -370,20 +385,20 @@ VkSurfaceFormatKHR TpSwapChain::chooseSwapSurfaceFormat(
 }
 
 VkPresentModeKHR TpSwapChain::chooseSwapPresentMode(
-    const std::vector<VkPresentModeKHR> &availablePresentModes) {
-  for (const auto &availablePresentMode : availablePresentModes) {
-    if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-      std::cout << "Present mode: Mailbox" << std::endl;
-      return availablePresentMode;
-    }
-  }
+        const std::vector<VkPresentModeKHR> &availablePresentModes) {
+//  for (const auto &availablePresentMode : availablePresentModes) {
+//    if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+//      std::cout << "Present mode: Mailbox" << std::endl;
+//      return availablePresentMode;
+//    }
+//  }
 
-  // for (const auto &availablePresentMode : availablePresentModes) {
-  //   if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-  //     std::cout << "Present mode: Immediate" << std::endl;
-  //     return availablePresentMode;
-  //   }
-  // }
+//   for (const auto &availablePresentMode : availablePresentModes) {
+//     if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+//       std::cout << "Present mode: Immediate" << std::endl;
+//       return availablePresentMode;
+//     }
+//   }
 
   std::cout << "Present mode: V-Sync" << std::endl;
   return VK_PRESENT_MODE_FIFO_KHR;
@@ -395,11 +410,11 @@ VkExtent2D TpSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabil
   } else {
     VkExtent2D actualExtent = windowExtent;
     actualExtent.width = std::max(
-        capabilities.minImageExtent.width,
-        std::min(capabilities.maxImageExtent.width, actualExtent.width));
+            capabilities.minImageExtent.width,
+            std::min(capabilities.maxImageExtent.width, actualExtent.width));
     actualExtent.height = std::max(
-        capabilities.minImageExtent.height,
-        std::min(capabilities.maxImageExtent.height, actualExtent.height));
+            capabilities.minImageExtent.height,
+            std::min(capabilities.maxImageExtent.height, actualExtent.height));
 
     return actualExtent;
   }
@@ -407,9 +422,9 @@ VkExtent2D TpSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabil
 
 VkFormat TpSwapChain::findDepthFormat() {
   return device.findSupportedFormat(
-      {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
-      VK_IMAGE_TILING_OPTIMAL,
-      VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+          {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+          VK_IMAGE_TILING_OPTIMAL,
+          VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 }  // namespace teapot
