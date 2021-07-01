@@ -1,10 +1,9 @@
 #pragma once
 
 #include "tp_device.h"
-#include "tp_pipeline.h"
-#include "tp_swap_chain.h"
+#include "tp_renderer.h"
 #include "tp_window.h"
-#include "tp_model.h"
+#include "tp_gameobject.h"
 
 // std
 #include <memory>
@@ -28,21 +27,12 @@ class FirstApp {
   void run();
 
  private:
-  void createPipelineLayout();
-  void createPipeline();
-  void createCommandBuffers();
-  void drawFrame();
-  void loadModel();
-  void recreateSwapChain();
-  void recordCommandBuffer(uint32_t imageIndex);
-  void freeCommandBuffers();
+  void loadGameObjects();
 
   teapot::TpWindow tpWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
   teapot::TpDevice tpDevice{tpWindow};
-  std::unique_ptr<teapot::TpSwapChain> tpSwapChain;
-  std::unique_ptr<teapot::TpPipeline> tpPipeline;
-  VkPipelineLayout pipelineLayout{};
-  std::vector<VkCommandBuffer> commandBuffers;
-  std::unique_ptr<TpModel> tpModel;
+  teapot::TpRenderer tpRenderer{tpWindow, tpDevice};
+
+  std::vector<TpGameObject> gameObjects;
 };
 }  // namespace teapot
