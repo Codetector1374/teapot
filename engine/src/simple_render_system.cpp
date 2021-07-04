@@ -13,8 +13,7 @@
 namespace teapot {
 
 struct SimplePushConstantData {
-  alignas(16) glm::mat2 transform{1.f};
-  alignas( 8) glm::vec2 offset;
+  glm::mat4 transform{1.f};
   alignas(16) glm::vec3 color;
 };
 
@@ -59,12 +58,13 @@ void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, std::v
   tpPipeline->bind(commandBuffer);
 
   for(auto& obj: gameObjects) {
-//    obj.transform2d.rotation = glm::mod(obj.transform2d.rotation + 0.05f, glm::two_pi<float>());
+//    obj.transform.rotation = glm::mod(obj.transform.rotation + 0.05f, glm::two_pi<float>());
+    obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.02f, glm::two_pi<float>());
+    obj.transform.rotation.z = glm::mod(obj.transform.rotation.z + 0.02f, glm::two_pi<float>());
 
     SimplePushConstantData push{};
-    push.offset = obj.transform2d.translation;
     push.color = obj.color;
-    push.transform = obj.transform2d.mat2();
+    push.transform = obj.transform.mat4();
 
     vkCmdPushConstants(commandBuffer, pipelineLayout,
                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,

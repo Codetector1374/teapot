@@ -60,7 +60,7 @@ std::vector<VkVertexInputAttributeDescription> TpModel::Vertex::getAttributeDesc
 
   attrDescs[0].binding = 0;
   attrDescs[0].location = 0;
-  attrDescs[0].format = VK_FORMAT_R32G32_SFLOAT;
+  attrDescs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
   attrDescs[0].offset = offsetof(Vertex, position);
 
   attrDescs[1].binding = 0;

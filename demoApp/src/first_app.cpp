@@ -18,9 +18,7 @@ FirstApp::FirstApp() {
   loadGameObjects();
 }
 
-FirstApp::~FirstApp() {
-
-}
+FirstApp::~FirstApp() = default;
 
 void FirstApp::run() {
   SimpleRenderSystem simpleRenderSystem{tpDevice, tpRenderer.getSwapChainRenderPass()};
@@ -40,21 +38,72 @@ void FirstApp::run() {
   vkDeviceWaitIdle(tpDevice.device());
 }
 
-void FirstApp::loadGameObjects() {
-  std::vector<TpModel::Vertex> vertices {
-          {{0, -0.5}, {1,0,0}},
-          {{0.5,0.5}, {0,1,0}},
-          {{-0.5,0.5}, {0,0,1}},
+// temporary helper function, creates a 1x1x1 cube centered at offset
+std::unique_ptr<TpModel> createCubeModel(TpDevice& device, glm::vec3 offset) {
+  std::vector<TpModel::Vertex> vertices{
+
+          // left face (white)
+          {{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
+          {{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
+          {{-.5f, -.5f, .5f}, {.9f, .9f, .9f}},
+          {{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
+          {{-.5f, .5f, -.5f}, {.9f, .9f, .9f}},
+          {{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
+
+          // right face (yellow)
+          {{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
+          {{.5f, .5f, .5f}, {.8f, .8f, .1f}},
+          {{.5f, -.5f, .5f}, {.8f, .8f, .1f}},
+          {{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
+          {{.5f, .5f, -.5f}, {.8f, .8f, .1f}},
+          {{.5f, .5f, .5f}, {.8f, .8f, .1f}},
+
+          // top face (orange, remember y axis points down)
+          {{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
+          {{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+          {{-.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+          {{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
+          {{.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
+          {{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+
+          // bottom face (red)
+          {{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
+          {{.5f, .5f, .5f}, {.8f, .1f, .1f}},
+          {{-.5f, .5f, .5f}, {.8f, .1f, .1f}},
+          {{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
+          {{.5f, .5f, -.5f}, {.8f, .1f, .1f}},
+          {{.5f, .5f, .5f}, {.8f, .1f, .1f}},
+
+          // nose face (blue)
+          {{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
+          {{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
+          {{-.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
+          {{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
+          {{.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
+          {{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
+
+          // tail face (green)
+          {{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
+          {{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
+          {{-.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
+          {{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
+          {{.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
+          {{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
+
   };
+  for (auto& v : vertices) {
+    v.position += offset;
+  }
+  return std::make_unique<TpModel>(device, vertices);
+}
 
-  auto tpModel = std::make_shared<TpModel>(tpDevice, vertices);
-  auto triangle = TpGameObject::createGameObject();
-  triangle.model = tpModel;
-  triangle.color = {.1, .8, .1};
-//  triangle.transform2d.scale = {1.f, 1.f};
-//  triangle.transform2d.rotation = .25f * glm::two_pi<float>();
-
-  gameObjects.push_back(std::move(triangle));
+void FirstApp::loadGameObjects() {
+  std::shared_ptr<TpModel> tpModel = createCubeModel(tpDevice, {0,0,0});
+  auto cube = TpGameObject::createGameObject();
+  cube.model = tpModel;
+  cube.transform.translation = {0,0,0.5};
+  cube.transform.scale = {0.5,0.5,0.5};
+  gameObjects.push_back(std::move(cube));
 }
 
 }  // namespace teapot

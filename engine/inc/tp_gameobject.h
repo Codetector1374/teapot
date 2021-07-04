@@ -7,18 +7,24 @@
 #include "tp_model.h"
 #include <memory>
 
-namespace teapot {
-struct Transform2dComponent {
-  glm::vec2 translation{};
-  glm::vec2 scale{1.f, 1.f};
-  float rotation;
+#include <glm/gtc/matrix_transform.hpp>
 
-  glm::mat2 mat2() const {
-    const float sin = glm::sin(rotation);
-    const float cos = glm::cos(rotation);
-    glm::mat2 rotMat{{cos, sin}, {-sin, cos}};
-    glm::mat2 scaleMat{{scale.x, .0f}, {.0f, scale.y}};
-    return rotMat * scaleMat;
+namespace teapot {
+struct TransformComponent {
+  glm::vec3 translation{};
+  glm::vec3 scale{1.f, 1.f, 1.f};
+  glm::vec3 rotation;
+
+  glm::mat4 mat4() {
+    auto transform = glm::translate(glm::mat4{1.f}, translation);
+
+    // Apply three axis of rotation in order
+    transform = glm::rotate(transform, rotation.y, {0,1,0});
+    transform = glm::rotate(transform, rotation.x, {1,0,0});
+    transform = glm::rotate(transform, rotation.z, {0,0,1});
+
+    transform = glm::scale(transform, scale);
+    return transform;
   }
 };
 
@@ -43,7 +49,7 @@ struct Transform2dComponent {
 
     std::shared_ptr<TpModel> model{};
     glm::vec3 color{};
-    Transform2dComponent transform2d{};
+    TransformComponent transform{};
   private:
 
     TpGameObject(id_t objId): id{objId} {}
