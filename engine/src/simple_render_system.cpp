@@ -54,8 +54,11 @@ void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
           pipelineConfig);
 }
 
-void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, std::vector<TpGameObject> &gameObjects) {
+void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer,
+                                           std::vector<TpGameObject> &gameObjects, const teapot::TpCamera &camera) {
   tpPipeline->bind(commandBuffer);
+
+  auto projectionView = camera.getProjection() * camera.getView();
 
   for(auto& obj: gameObjects) {
 //    obj.transform.rotation = glm::mod(obj.transform.rotation + 0.05f, glm::two_pi<float>());
@@ -64,7 +67,7 @@ void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, std::v
 
     SimplePushConstantData push{};
     push.color = obj.color;
-    push.transform = obj.transform.mat4();
+    push.transform = projectionView * obj.transform.mat4();
 
     vkCmdPushConstants(commandBuffer, pipelineLayout,
                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,

@@ -37,6 +37,9 @@ public:
   VkRenderPass getSwapChainRenderPass() const {
     return tpSwapChain->getRenderPass();
   }
+  float getAspectRatio() const {
+    return tpSwapChain->extentAspectRatio();
+  }
 
   VkCommandBuffer beginFrame();
   void endFrame();

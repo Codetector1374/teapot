@@ -22,13 +22,17 @@ FirstApp::~FirstApp() = default;
 
 void FirstApp::run() {
   SimpleRenderSystem simpleRenderSystem{tpDevice, tpRenderer.getSwapChainRenderPass()};
+  TpCamera camera{};
+  camera.setViewDirection(glm::vec3{0.f, 0.f, 0.f}, glm::vec3{0.5, 0.f, 1.f});
 
   while (!tpWindow.shouldClose()) {
     glfwPollEvents();
+    float aspect = tpRenderer.getAspectRatio();
+    camera.setPerspectiveProjection(glm::radians(50.f), aspect, .1f, 10.0f);
 
     if (auto commandBuffer = tpRenderer.beginFrame()) {
       tpRenderer.beginSwapChainRenderPass(commandBuffer);
-      simpleRenderSystem.renderGameObjects(commandBuffer, gameObjects);
+      simpleRenderSystem.renderGameObjects(commandBuffer, gameObjects, camera);
       tpRenderer.endSwapChainRenderPass(commandBuffer);
       tpRenderer.endFrame();
     }
@@ -101,7 +105,7 @@ void FirstApp::loadGameObjects() {
   std::shared_ptr<TpModel> tpModel = createCubeModel(tpDevice, {0,0,0});
   auto cube = TpGameObject::createGameObject();
   cube.model = tpModel;
-  cube.transform.translation = {0,0,0.5};
+  cube.transform.translation = {0,0,2};
   cube.transform.scale = {0.5,0.5,0.5};
   gameObjects.push_back(std::move(cube));
 }

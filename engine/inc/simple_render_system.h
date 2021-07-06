@@ -6,6 +6,7 @@
 #define TEAPOT_SIMPLE_RENDER_SYSTEM_H
 
 #include "tp_device.h"
+#include "tp_camera.h"
 #include "tp_pipeline.h"
 #include "tp_gameobject.h"
 
@@ -25,7 +26,7 @@ public:
 
   void run();
 
-  void renderGameObjects(VkCommandBuffer commandBuffer, std::vector<TpGameObject> &gameObjects);
+  void renderGameObjects(VkCommandBuffer commandBuffer, std::vector<TpGameObject> &gameObjects, const TpCamera &camera);
 
 private:
   void createPipelineLayout();
