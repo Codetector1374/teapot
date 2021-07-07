@@ -37,6 +37,9 @@ private:
 
   std::unique_ptr<teapot::TpPipeline> tpPipeline;
   VkPipelineLayout pipelineLayout;
+  VkDescriptorSetLayout descriptorSetLayout;
+
+  void createDescriptorSetLayout();
 };
 }  // namespace teapot
 
