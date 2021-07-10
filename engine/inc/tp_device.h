@@ -1,7 +1,7 @@
 #pragma once
 
 #include "tp_window.h"
-
+#include <vk_mem_alloc.h>
 // std lib headers
 #include <string>
 #include <vector>
@@ -39,11 +39,12 @@ class TpDevice {
   TpDevice(TpDevice &&) = delete;
   TpDevice &operator=(TpDevice &&) = delete;
 
-  VkCommandPool getCommandPool() { return commandPool; }
-  VkDevice device() { return device_; }
-  VkSurfaceKHR surface() { return surface_; }
-  VkQueue graphicsQueue() { return graphicsQueue_; }
-  VkQueue presentQueue() { return presentQueue_; }
+  VkCommandPool getCommandPool() const { return commandPool; }
+  VkDevice device() const { return device_; }
+  VkSurfaceKHR surface() const { return surface_; }
+  VkQueue graphicsQueue() const { return graphicsQueue_; }
+  VkQueue presentQueue() const { return presentQueue_; }
+  VmaAllocator allocator() const { return allocator_; }
 
   SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
   uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -55,9 +56,9 @@ class TpDevice {
   void createBuffer(
       VkDeviceSize size,
       VkBufferUsageFlags usage,
-      VkMemoryPropertyFlags properties,
+      VmaMemoryUsage vmaUsage,
       VkBuffer &buffer,
-      VkDeviceMemory &bufferMemory);
+      VmaAllocation &allocation);
   VkCommandBuffer beginSingleTimeCommands();
   void endSingleTimeCommands(VkCommandBuffer commandBuffer);
   void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
@@ -70,7 +71,7 @@ class TpDevice {
       VkImage &image,
       VkDeviceMemory &imageMemory);
 
-  VkPhysicalDeviceProperties properties;
+  VkPhysicalDeviceProperties properties{};
 
  private:
   void createInstance();
@@ -90,19 +91,23 @@ class TpDevice {
   bool checkDeviceExtensionSupport(VkPhysicalDevice device);
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
-  VkInstance instance;
-  VkDebugUtilsMessengerEXT debugMessenger;
+  VkInstance instance{};
+  VkDebugUtilsMessengerEXT debugMessenger{};
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   TpWindow &window;
-  VkCommandPool commandPool;
+  VkCommandPool commandPool{};
+  VmaAllocator allocator_{};
 
-  VkDevice device_;
-  VkSurfaceKHR surface_;
-  VkQueue graphicsQueue_;
-  VkQueue presentQueue_;
+
+  VkDevice device_{};
+  VkSurfaceKHR surface_{};
+  VkQueue graphicsQueue_{};
+  VkQueue presentQueue_{};
 
   const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
   const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
+  void initializeAllocator();
 };
 
 }  // namespace teapot

@@ -53,11 +53,13 @@ TpDevice::TpDevice(TpWindow &window) : window{window} {
   createSurface();
   pickPhysicalDevice();
   createLogicalDevice();
+  initializeAllocator();
   createCommandPool();
 }
 
 TpDevice::~TpDevice() {
   vkDestroyCommandPool(device_, commandPool, nullptr);
+  vmaDestroyAllocator(allocator_);
   vkDestroyDevice(device_, nullptr);
 
   if (enableValidationLayers) {
@@ -79,7 +81,7 @@ void TpDevice::createInstance() {
   appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
   appInfo.pEngineName = "No Engine";
   appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-  appInfo.apiVersion = VK_API_VERSION_1_0;
+  appInfo.apiVersion = VK_API_VERSION_1_1;
 
   VkInstanceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -406,32 +408,37 @@ uint32_t TpDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags pro
 void TpDevice::createBuffer(
     VkDeviceSize size,
     VkBufferUsageFlags usage,
-    VkMemoryPropertyFlags properties,
+    VmaMemoryUsage vmaUsage,
     VkBuffer &buffer,
-    VkDeviceMemory &bufferMemory) {
+    VmaAllocation &allocation) {
   VkBufferCreateInfo bufferInfo{};
   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   bufferInfo.size = size;
   bufferInfo.usage = usage;
   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-  if (vkCreateBuffer(device_, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create vertex buffer!");
-  }
+//  if (vkCreateBuffer(device_, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+//    throw std::runtime_error("failed to create vertex buffer!");
+//  }
 
-  VkMemoryRequirements memRequirements;
-  vkGetBufferMemoryRequirements(device_, buffer, &memRequirements);
+//  VkMemoryRequirements memRequirements;
+//  vkGetBufferMemoryRequirements(device_, buffer, &memRequirements);
+//
+//  VkMemoryAllocateInfo allocInfo{};
+//  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+//  allocInfo.allocationSize = memRequirements.size;
+//  allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+//
+//  if (vkAllocateMemory(device_, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+//    throw std::runtime_error("failed to allocate vertex buffer memory!");
+//  }
+//
+//  vkBindBufferMemory(device_, buffer, bufferMemory, 0);
 
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+  VmaAllocationCreateInfo vmaCreateInfo{};
+  vmaCreateInfo.usage = vmaUsage;
 
-  if (vkAllocateMemory(device_, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate vertex buffer memory!");
-  }
-
-  vkBindBufferMemory(device_, buffer, bufferMemory, 0);
+  vmaCreateBuffer(allocator_, &bufferInfo, &vmaCreateInfo, &buffer, &allocation, nullptr);
 }
 
 VkCommandBuffer TpDevice::beginSingleTimeCommands() {
@@ -529,6 +536,16 @@ void TpDevice::createImageWithInfo(
   if (vkBindImageMemory(device_, image, imageMemory, 0) != VK_SUCCESS) {
     throw std::runtime_error("failed to bind image memory!");
   }
+}
+
+void TpDevice::initializeAllocator() {
+  VmaAllocatorCreateInfo allocatorInfo = {};
+  allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_1;
+  allocatorInfo.physicalDevice = physicalDevice;
+  allocatorInfo.device = device_;
+  allocatorInfo.instance = instance;
+
+  vmaCreateAllocator(&allocatorInfo, &allocator_);
 }
 
 }  // namespace teapot

@@ -38,7 +38,7 @@ private:
 
   TpDevice& tpDevice;
   VkBuffer vertexBuffer;
-  VkDeviceMemory vertexBufferMemory;
+  VmaAllocation bufferAlloc;
   uint32_t vertexCount;
 };
 }

@@ -13,8 +13,7 @@ TpModel::TpModel(TpDevice &device, const std::vector<Vertex> &vertices): tpDevic
 }
 
 TpModel::~TpModel() {
-  vkDestroyBuffer(tpDevice.device(), vertexBuffer, nullptr);
-  vkFreeMemory(tpDevice.device(), vertexBufferMemory, nullptr);
+  vmaDestroyBuffer(tpDevice.allocator(), vertexBuffer, bufferAlloc);
 }
 
 void TpModel::createVertexBuffers(const std::vector<Vertex> &vertices) {
@@ -23,22 +22,22 @@ void TpModel::createVertexBuffers(const std::vector<Vertex> &vertices) {
   VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
 
   VkBuffer stagingBuffer;
-  VkDeviceMemory stagingBufferMemory;
+  VmaAllocation stagingAlloc;
   tpDevice.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                        stagingBuffer, stagingBufferMemory);
+                        VMA_MEMORY_USAGE_CPU_TO_GPU,
+                        stagingBuffer, stagingAlloc);
   void *data;
-  vkMapMemory(tpDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
+  vmaMapMemory(tpDevice.allocator(), stagingAlloc, &data);
   memcpy(data, vertices.data(), bufferSize);
-  vkUnmapMemory(tpDevice.device(), stagingBufferMemory);
+  vmaFlushAllocation(tpDevice.allocator(), stagingAlloc, 0, bufferSize);
+  vmaUnmapMemory(tpDevice.allocator(), stagingAlloc);
 
   tpDevice.createBuffer(bufferSize,
                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                        vertexBuffer, vertexBufferMemory);
+                        VMA_MEMORY_USAGE_GPU_ONLY,
+                        vertexBuffer, bufferAlloc);
   tpDevice.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-  vkDestroyBuffer(tpDevice.device(), stagingBuffer, nullptr);
-  vkFreeMemory(tpDevice.device(), stagingBufferMemory, nullptr);
+  vmaDestroyBuffer(tpDevice.allocator(), stagingBuffer, stagingAlloc);
 }
 
 /*

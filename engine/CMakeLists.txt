@@ -9,4 +9,4 @@ target_compile_definitions(teapot PRIVATE NOMINMAX)
 
 target_include_directories(teapot PUBLIC inc)
 target_compile_definitions(teapot PRIVATE VK_USE_PLATFORM_WIN32_KHR)
-target_link_libraries(teapot Vulkan::Vulkan glm glfw)
+target_link_libraries(teapot Vulkan::Vulkan glm glfw VulkanMemoryAllocator)
