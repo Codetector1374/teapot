@@ -122,21 +122,20 @@ void TpDevice::pickPhysicalDevice() {
 
   for (const auto &device : devices) {
     if (isDeviceSuitable(device)) {
-      physicalDevice = device;
-      break;
+      physicalDevices.push_back(device);
     }
   }
 
-  if (physicalDevice == VK_NULL_HANDLE) {
+  if (physicalDevices.empty()) {
     throw std::runtime_error("failed to find a suitable GPU!");
   }
 
-  vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+  vkGetPhysicalDeviceProperties(physicalDevices[0], &properties);
   std::cout << "physical device: " << properties.deviceName << std::endl;
 }
 
 void TpDevice::createLogicalDevice() {
-  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevices[0]);
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
   std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
@@ -154,6 +153,12 @@ void TpDevice::createLogicalDevice() {
   VkPhysicalDeviceFeatures deviceFeatures = {};
   deviceFeatures.samplerAnisotropy = VK_TRUE;
 
+  VkDeviceGroupDeviceCreateInfo groupDeviceCreateInfo{};
+  groupDeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO;
+  groupDeviceCreateInfo.physicalDeviceCount = physicalDevices.size();
+  groupDeviceCreateInfo.pPhysicalDevices = physicalDevices.data();
+  groupDeviceCreateInfo.pNext = nullptr;
+
   VkDeviceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -164,6 +169,8 @@ void TpDevice::createLogicalDevice() {
   createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
   createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
+  createInfo.pNext = &groupDeviceCreateInfo;
+
   // might not really be necessary anymore because device specific validation layers
   // have been deprecated
   if (enableValidationLayers) {
@@ -173,7 +180,7 @@ void TpDevice::createLogicalDevice() {
     createInfo.enabledLayerCount = 0;
   }
 
-  if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device_) != VK_SUCCESS) {
+  if (vkCreateDevice(physicalDevices[0], &createInfo, nullptr, &device_) != VK_SUCCESS) {
     throw std::runtime_error("failed to create logical device!");
   }
 
@@ -380,7 +387,7 @@ VkFormat TpDevice::findSupportedFormat(
     const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
   for (VkFormat format : candidates) {
     VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+    vkGetPhysicalDeviceFormatProperties(physicalDevices[0], format, &props);
 
     if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
       return format;
@@ -394,7 +401,7 @@ VkFormat TpDevice::findSupportedFormat(
 
 uint32_t TpDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
   VkPhysicalDeviceMemoryProperties memProperties;
-  vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+  vkGetPhysicalDeviceMemoryProperties(physicalDevices[0], &memProperties);
   for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
     if ((typeFilter & (1 << i)) &&
         (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -541,7 +548,7 @@ void TpDevice::createImageWithInfo(
 void TpDevice::initializeAllocator() {
   VmaAllocatorCreateInfo allocatorInfo = {};
   allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_1;
-  allocatorInfo.physicalDevice = physicalDevice;
+  allocatorInfo.physicalDevice = physicalDevices[0];
   allocatorInfo.device = device_;
   allocatorInfo.instance = instance;
 

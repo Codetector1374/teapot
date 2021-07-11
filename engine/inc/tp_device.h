@@ -46,9 +46,9 @@ class TpDevice {
   VkQueue presentQueue() const { return presentQueue_; }
   VmaAllocator allocator() const { return allocator_; }
 
-  SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
+  SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevices[0]); }
   uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-  QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(physicalDevice); }
+  QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(physicalDevices[0]); }
   VkFormat findSupportedFormat(
       const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
@@ -93,7 +93,7 @@ class TpDevice {
 
   VkInstance instance{};
   VkDebugUtilsMessengerEXT debugMessenger{};
-  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+  std::vector<VkPhysicalDevice> physicalDevices;
   TpWindow &window;
   VkCommandPool commandPool{};
   VmaAllocator allocator_{};
