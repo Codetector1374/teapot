@@ -3,7 +3,7 @@ project(teapot)
 
 add_library(teapot
         src/tp_device.cpp src/tp_pipeline.cpp src/tp_swap_chain.cpp src/tp_window.cpp
-        src/tp_model.cpp src/tp_renderer.cpp src/simple_render_system.cpp inc/simple_render_system.h src/tp_camera.cpp inc/tp_camera.h)
+        src/tp_model.cpp src/tp_renderer.cpp src/simple_render_system.cpp inc/simple_render_system.h src/tp_camera.cpp inc/tp_camera.h src/tiny_obj_loader.h.cpp)
 
 target_compile_definitions(teapot PRIVATE NOMINMAX)
 

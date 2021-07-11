@@ -74,8 +74,8 @@ void TpPipeline::createGraphicsPipeline(
   shaderStages[1].pNext = nullptr;
   shaderStages[1].pSpecializationInfo = nullptr;
 
-  auto bindingDescs = TpModel::Vertex::getBindingDescriptions();
-  auto attrDescs = TpModel::Vertex::getAttributeDescriptions();
+  auto bindingDescs = Vertex::getBindingDescriptions();
+  auto attrDescs = Vertex::getAttributeDescriptions();
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
   vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

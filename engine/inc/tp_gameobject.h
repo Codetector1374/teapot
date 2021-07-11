@@ -9,6 +9,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+
 namespace teapot {
 struct TransformComponent {
   glm::vec3 translation{};

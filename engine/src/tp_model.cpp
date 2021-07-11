@@ -5,6 +5,9 @@
 
 #include <cstring>
 #include <cassert>
+#include <stdexcept>
+
+#include "tiny_obj_loader.h"
 
 namespace teapot {
 
@@ -13,10 +16,49 @@ TpModel::TpModel(TpDevice &device, const std::vector<Vertex> &vertices, const st
   createIndexBuffer(indices);
 }
 
+std::shared_ptr<TpModel> TpModel::loadObjFile(TpDevice &device, std::string objFilePath) {
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string err;
+
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, objFilePath.c_str())) {
+    throw std::runtime_error(err);
+  }
+
+  std::vector<Vertex> vertices;
+  std::vector<uint32_t> indices;
+
+  for (const auto& shape : shapes) {
+    for (const auto& index : shape.mesh.indices) {
+      Vertex vertex{};
+
+      vertex.position = {
+              attrib.vertices[3 * index.vertex_index + 0],
+              attrib.vertices[3 * index.vertex_index + 1],
+              attrib.vertices[3 * index.vertex_index + 2]
+      };
+
+//      vertex.texCoord = {
+//              attrib.texcoords[2 * index.texcoord_index + 0],
+//              attrib.texcoords[2 * index.texcoord_index + 1]
+//      };
+
+      vertex.color = {0.f, 0.5f, 1.0f};
+
+      vertices.push_back(vertex);
+      indices.push_back(indices.size());
+    }
+  }
+
+  return std::make_shared<TpModel>(device, vertices, indices);
+}
+
 TpModel::~TpModel() {
   vmaDestroyBuffer(tpDevice.allocator(), vertexBuffer, vertexBufferAllocation);
   vmaDestroyBuffer(tpDevice.allocator(), indexBuffer, indexBufferAllocation);
 }
+
 
 void TpModel::createVertexBuffers(const std::vector<Vertex> &vertices) {
   vertexCount = static_cast<uint32_t>(vertices.size());
@@ -42,7 +84,6 @@ void TpModel::createVertexBuffers(const std::vector<Vertex> &vertices) {
   vmaDestroyBuffer(tpDevice.allocator(), stagingBuffer, stagingAlloc);
 }
 
-
 void TpModel::createIndexBuffer(const std::vector<uint32_t> &indices) {
   indexCount = static_cast<uint32_t>(indices.size());
   VkDeviceSize indexBufferSize = sizeof(indices[0]) * indexCount;
@@ -50,7 +91,7 @@ void TpModel::createIndexBuffer(const std::vector<uint32_t> &indices) {
   VkBuffer stagingBuffer;
   VmaAllocation stagingBufferAllocation;
   tpDevice.createBuffer(indexBufferSize,
-                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                         VMA_MEMORY_USAGE_CPU_TO_GPU,
                         stagingBuffer, stagingBufferAllocation);
 
@@ -59,7 +100,7 @@ void TpModel::createIndexBuffer(const std::vector<uint32_t> &indices) {
   memcpy(data, indices.data(), (size_t) indexBufferSize);
   vmaUnmapMemory(tpDevice.allocator(), stagingBufferAllocation);
 
-  tpDevice.createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+  tpDevice.createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                         VMA_MEMORY_USAGE_GPU_ONLY, indexBuffer, indexBufferAllocation);
 
   tpDevice.copyBuffer(stagingBuffer, indexBuffer, indexBufferSize);
@@ -81,7 +122,7 @@ void TpModel::draw(VkCommandBuffer commandBuffer) {
 }
 
 
-std::vector<VkVertexInputBindingDescription> TpModel::Vertex::getBindingDescriptions() {
+std::vector<VkVertexInputBindingDescription> Vertex::getBindingDescriptions() {
   std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
 
   bindingDescriptions[0].binding = 0;
@@ -91,7 +132,7 @@ std::vector<VkVertexInputBindingDescription> TpModel::Vertex::getBindingDescript
   return bindingDescriptions;
 }
 
-std::vector<VkVertexInputAttributeDescription> TpModel::Vertex::getAttributeDescriptions() {
+std::vector<VkVertexInputAttributeDescription> Vertex::getAttributeDescriptions() {
   std::vector<VkVertexInputAttributeDescription> attrDescs(2);
 
   attrDescs[0].binding = 0;

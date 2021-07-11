@@ -24,7 +24,7 @@ void FirstApp::run() {
   SimpleRenderSystem simpleRenderSystem{tpDevice,
                                         tpRenderer.getSwapChainRenderPass(), tpRenderer.getDescriptorSetLayout()};
   TpCamera camera{};
-  camera.setViewDirection(glm::vec3{0.f, 0.f, 0.f}, glm::vec3{0.5, 0.f, 1.f});
+  camera.setViewDirection(glm::vec3{0.f, 0.f, 0.f}, glm::vec3{0.0, 0.f, 1.f});
 
   while (!tpWindow.shouldClose()) {
     glfwPollEvents();
@@ -48,74 +48,43 @@ void FirstApp::run() {
 
 // temporary helper function, creates a 1x1x1 cube centered at offset
 std::unique_ptr<TpModel> createCubeModel(TpDevice& device, glm::vec3 offset) {
-  std::vector<TpModel::Vertex> vertices{
+  std::vector<Vertex> vertices {
+          {{0,0,0}, {1,0,0}},
+          {{0.5,0,0}, {1,0,0}},
+          {{0.5,0.5,0}, {1,0,0}},
+          {{0.0,0.5,0}, {1,0,0}},
 
-          // left face (white)
-          {{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
-          {{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
-          {{-.5f, -.5f, .5f}, {.9f, .9f, .9f}},
-          {{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
-          {{-.5f, .5f, -.5f}, {.9f, .9f, .9f}},
-          {{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
-
-          // right face (yellow)
-          {{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
-          {{.5f, .5f, .5f}, {.8f, .8f, .1f}},
-          {{.5f, -.5f, .5f}, {.8f, .8f, .1f}},
-          {{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
-          {{.5f, .5f, -.5f}, {.8f, .8f, .1f}},
-          {{.5f, .5f, .5f}, {.8f, .8f, .1f}},
-
-          // top face (orange, remember y axis points down)
-          {{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
-          {{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
-          {{-.5f, -.5f, .5f}, {.9f, .6f, .1f}},
-          {{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
-          {{.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
-          {{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
-
-          // bottom face (red)
-          {{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
-          {{.5f, .5f, .5f}, {.8f, .1f, .1f}},
-          {{-.5f, .5f, .5f}, {.8f, .1f, .1f}},
-          {{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
-          {{.5f, .5f, -.5f}, {.8f, .1f, .1f}},
-          {{.5f, .5f, .5f}, {.8f, .1f, .1f}},
-
-          // nose face (blue)
-          {{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
-          {{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
-          {{-.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
-          {{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
-          {{.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
-          {{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
-
-          // tail face (green)
-          {{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
-          {{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
-          {{-.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
-          {{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
-          {{.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
-          {{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
-
+          {{0.25,0.25,1}, {1,1,0}},
+          {{0.75,0.25,1}, {1,1,0}},
+          {{0.75,0.75,1}, {1,1,0}},
+          {{0.25,0.75,1}, {1,1,0}},
   };
   for (auto& v : vertices) {
     v.position += offset;
   }
-  std::vector<uint32_t> indexLMAO{};
-  for(size_t i = 0; i < vertices.size(); i++) {
-    indexLMAO.push_back(i);
-  }
+  std::vector<uint32_t> indexLMAO {
+    0,1,3,
+    1,2,3,
+
+    4,5,7,
+    5,6,7,
+  };
   return std::make_unique<TpModel>(device, vertices, indexLMAO);
 }
 
 void FirstApp::loadGameObjects() {
-  std::shared_ptr<TpModel> tpModel = createCubeModel(tpDevice, {0,0,0});
+//  std::shared_ptr<TpModel> tpModel = createCubeModel(tpDevice, {0,0,0});
+  std::shared_ptr<TpModel> tpModel = TpModel::loadObjFile(tpDevice, "../../demoApp/models/scene.obj");
   auto cube = TpGameObject::createGameObject();
   cube.model = tpModel;
   cube.transform.translation = {0,0,2};
-  cube.transform.scale = {0.5,0.5,0.5};
+  cube.transform.scale = {0.003,0.003,0.003};
+  cube.transform.rotation.z = glm::radians<float>(180);
   gameObjects.push_back(std::move(cube));
+
+
+
+
 }
 
 }  // namespace teapot

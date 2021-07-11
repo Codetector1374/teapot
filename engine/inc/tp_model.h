@@ -7,25 +7,28 @@
 
 #include "tp_device.h"
 
+#include <memory>
+
 // GLM Configuration
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
 namespace teapot {
+struct Vertex {
+  glm::vec3 position;
+  glm::vec3 color;
+
+  static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
+  static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+};
+
 class TpModel {
 public:
-
-  struct Vertex {
-    glm::vec3 position;
-    glm::vec3 color;
-
-    static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
-    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
-  };
-
   TpModel(TpDevice &device, const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
   ~TpModel();
+
+  static std::shared_ptr<TpModel> loadObjFile(TpDevice &device, std::string objFilePath);
 
   TpModel(const TpModel &) = delete;
   TpModel &operator=(const TpModel &) = delete;
