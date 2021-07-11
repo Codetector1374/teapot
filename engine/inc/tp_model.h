@@ -24,7 +24,7 @@ public:
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
   };
 
-  TpModel(TpDevice &device, const std::vector<Vertex> &vertices);
+  TpModel(TpDevice &device, const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
   ~TpModel();
 
   TpModel(const TpModel &) = delete;
@@ -35,11 +35,16 @@ public:
 
 private:
   void createVertexBuffers(const std::vector<Vertex> &vertices);
+  void createIndexBuffer(const std::vector<uint32_t> &indices);
 
   TpDevice& tpDevice;
   VkBuffer vertexBuffer;
-  VmaAllocation bufferAlloc;
+  VmaAllocation vertexBufferAllocation;
   uint32_t vertexCount;
+
+  VkBuffer indexBuffer;
+  VmaAllocation indexBufferAllocation;
+  uint32_t indexCount;
 };
 }
 

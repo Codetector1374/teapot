@@ -98,7 +98,11 @@ std::unique_ptr<TpModel> createCubeModel(TpDevice& device, glm::vec3 offset) {
   for (auto& v : vertices) {
     v.position += offset;
   }
-  return std::make_unique<TpModel>(device, vertices);
+  std::vector<uint32_t> indexLMAO{};
+  for(size_t i = 0; i < vertices.size(); i++) {
+    indexLMAO.push_back(i);
+  }
+  return std::make_unique<TpModel>(device, vertices, indexLMAO);
 }
 
 void FirstApp::loadGameObjects() {
