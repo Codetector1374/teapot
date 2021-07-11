@@ -15,7 +15,7 @@ struct TransformComponent {
   glm::vec3 scale{1.f, 1.f, 1.f};
   glm::vec3 rotation;
 
-  glm::mat4 mat4() {
+  glm::mat4 mat4() const {
     auto transform = glm::translate(glm::mat4{1.f}, translation);
 
     // Apply three axis of rotation in order

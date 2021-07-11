@@ -21,7 +21,8 @@ FirstApp::FirstApp() {
 FirstApp::~FirstApp() = default;
 
 void FirstApp::run() {
-  SimpleRenderSystem simpleRenderSystem{tpDevice, tpRenderer.getSwapChainRenderPass()};
+  SimpleRenderSystem simpleRenderSystem{tpDevice,
+                                        tpRenderer.getSwapChainRenderPass(), tpRenderer.getDescriptorSetLayout()};
   TpCamera camera{};
   camera.setViewDirection(glm::vec3{0.f, 0.f, 0.f}, glm::vec3{0.5, 0.f, 1.f});
 
@@ -32,7 +33,10 @@ void FirstApp::run() {
 
     if (auto commandBuffer = tpRenderer.beginFrame()) {
       tpRenderer.beginSwapChainRenderPass(commandBuffer);
-      simpleRenderSystem.renderGameObjects(commandBuffer, gameObjects, camera);
+      simpleRenderSystem.renderGameObjects(commandBuffer,
+                                           tpRenderer.getCurrentUboBuffer(), tpRenderer.getCurrentUboAllocation(),
+                                           tpRenderer.getCurrentDescriptorSet(),
+                                           gameObjects, camera);
       tpRenderer.endSwapChainRenderPass(commandBuffer);
       tpRenderer.endFrame();
     }

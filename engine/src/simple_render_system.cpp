@@ -1,13 +1,9 @@
 #include "simple_render_system.h"
 
-// GLM Configuration
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
-
 // std
 #include <array>
+#include <chrono>
+
 #include <stdexcept>
 
 namespace teapot {
@@ -17,24 +13,16 @@ struct SimplePushConstantData {
   alignas(16) glm::vec3 color;
 };
 
-struct UniformBufferObject {
-  glm::mat4 model;
-  glm::mat4 view;
-  glm::mat4 proj;
-};
-
-SimpleRenderSystem::SimpleRenderSystem(TpDevice &device, VkRenderPass renderPass): tpDevice{device} {
-  createDescriptorSetLayout();
-  createPipelineLayout();
+SimpleRenderSystem::SimpleRenderSystem(TpDevice &device, VkRenderPass renderPass, VkDescriptorSetLayout descLayout): tpDevice{device} {
+  createPipelineLayout(descLayout);
   createPipeline(renderPass);
 }
 
 SimpleRenderSystem::~SimpleRenderSystem() {
   vkDestroyPipelineLayout(tpDevice.device(), pipelineLayout, nullptr);
-  vkDestroyDescriptorSetLayout(tpDevice.device(), descriptorSetLayout, nullptr);
 }
 
-void SimpleRenderSystem::createPipelineLayout() {
+void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout descLayout) {
   VkPushConstantRange pushConstantRange{};
   pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
   pushConstantRange.size = sizeof(SimplePushConstantData);
@@ -43,7 +31,7 @@ void SimpleRenderSystem::createPipelineLayout() {
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutInfo.setLayoutCount = 1;
-  pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+  pipelineLayoutInfo.pSetLayouts = &descLayout;
   pipelineLayoutInfo.pushConstantRangeCount = 1;
   pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
   if (vkCreatePipelineLayout(tpDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
@@ -64,16 +52,37 @@ void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
           pipelineConfig);
 }
 
+void SimpleRenderSystem::updateUbo(VkCommandBuffer commandBuffer,
+                                   VkBuffer uboBuffer, VmaAllocation uboAllocation,
+                                   VkDescriptorSet descSet,
+                                   const TpGameObject &obj, const TpCamera &camera) {
+  UniformBufferObject ubo{};
+  ubo.model = obj.transform.mat4();
+  ubo.proj = camera.getProjection();
+  ubo.view = camera.getView();
+
+  void *mappedUboData;
+  vmaMapMemory(tpDevice.allocator(), uboAllocation, &mappedUboData);
+  memcpy(mappedUboData, &ubo, sizeof(ubo));
+  vmaUnmapMemory(tpDevice.allocator(), uboAllocation);
+
+  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
+                          0, 1, &descSet,
+                          0, nullptr);
+}
+
 void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer,
+                                           VkBuffer uboBuffer, VmaAllocation uboAllocation,
+                                           VkDescriptorSet descSet,
                                            std::vector<TpGameObject> &gameObjects, const teapot::TpCamera &camera) {
   tpPipeline->bind(commandBuffer);
 
-  auto projectionView = camera.getProjection() * camera.getView();
+  auto projectionView = camera.getView();
 
   for(auto& obj: gameObjects) {
 //    obj.transform.rotation = glm::mod(obj.transform.rotation + 0.05f, glm::two_pi<float>());
-    obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.02f, glm::two_pi<float>());
-    obj.transform.rotation.z = glm::mod(obj.transform.rotation.z + 0.02f, glm::two_pi<float>());
+    obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.01f, glm::two_pi<float>());
+    obj.transform.rotation.z = glm::mod(obj.transform.rotation.z + 0.01f, glm::two_pi<float>());
 
     SimplePushConstantData push{};
     push.color = obj.color;
@@ -85,26 +94,10 @@ void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer,
                        sizeof(SimplePushConstantData),
                        &push);
 
+    updateUbo(commandBuffer, uboBuffer, uboAllocation, descSet, obj, camera);
+
     obj.model->bind(commandBuffer);
     obj.model->draw(commandBuffer);
-  }
-}
-
-void SimpleRenderSystem::createDescriptorSetLayout() {
-  VkDescriptorSetLayoutBinding uboLayoutBinding{};
-  uboLayoutBinding.binding = 0;
-  uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  uboLayoutBinding.descriptorCount = 1;
-  uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-  uboLayoutBinding.pImmutableSamplers = nullptr;
-
-  VkDescriptorSetLayoutCreateInfo layoutInfo{};
-  layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  layoutInfo.bindingCount = 1;
-  layoutInfo.pBindings = &uboLayoutBinding;
-
-  if (vkCreateDescriptorSetLayout(tpDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create descriptor layout");
   }
 }
 
