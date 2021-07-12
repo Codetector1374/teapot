@@ -87,9 +87,6 @@ void SimpleRenderSystem::renderGameObjects(int frameIndex, VkCommandBuffer comma
   tpPipeline->bind(commandBuffer);
 
   for(auto& obj: gameObjects) {
-    obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.01f, glm::two_pi<float>());
-//    obj.transform.rotation.x = glm::mod(obj.transform.rotation.x + 0.005f, glm::two_pi<float>());
-
     SimplePushConstantData push{};
     push.proj = camera.getProjection();
     push.view = camera.getView();

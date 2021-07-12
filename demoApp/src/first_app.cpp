@@ -32,6 +32,15 @@ void FirstApp::run() {
     float aspect = tpRenderer.getAspectRatio();
     camera.setPerspectiveProjection(glm::radians(50.f), aspect, .1f, 10.0f);
 
+
+    if (glfwGetKey(tpWindow.getWindow(), GLFW_KEY_W) == GLFW_PRESS) {
+      gameObjects[0].transform.translation.y -= 0.01;
+    } else if (glfwGetKey(tpWindow.getWindow(), GLFW_KEY_S) == GLFW_PRESS) {
+      gameObjects[0].transform.translation.y += 0.01;
+    } else if (glfwGetKey(tpWindow.getWindow(), GLFW_KEY_LEFT) == GLFW_PRESS) {
+      gameObjects[0].transform.rotation.y = glm::mod(gameObjects[0].transform.rotation.y + 0.01f, glm::two_pi<float>());
+    }
+
     if (auto commandBuffer = tpRenderer.beginFrame()) {
       tpRenderer.beginSwapChainRenderPass(commandBuffer);
       simpleRenderSystem.renderGameObjects(tpRenderer.getFrameIndex(), commandBuffer,
@@ -76,16 +85,18 @@ void FirstApp::loadGameObjects(VkDescriptorSetLayout layout) {
   std::shared_ptr<TpModel> tpModel = TpModel::loadObjFile(tpDevice, "../../demoApp/models/chest/chest.obj",
                                                           "../../demoApp/models/chest/Scene_-_Root_baseColor.png");
   auto cube = TpGameObject::createGameObject(tpDevice, layout, tpModel);
-  cube.transform.translation = {0,0,2};
+  cube.transform.translation = {0,-0.5,2};
   cube.transform.scale = {0.2,0.2,0.2};
   cube.transform.rotation.z = glm::radians<float>(180);
   gameObjects.push_back(std::move(cube));
 
-//  auto cube2 = TpGameObject::createGameObject(tpDevice, layout, tpModel);
-//  cube2.transform.translation = {-0.5,0,2};
-//  cube2.transform.scale = {0.2,0.2,0.2};
-//  cube2.transform.rotation.z = glm::radians<float>(0);
-//  gameObjects.push_back(std::move(cube2));
+  auto roomModel = TpModel::loadObjFile(tpDevice, "../../demoApp/models/room/room.obj",
+                                        "../../demoApp/models/room/room.png");
+  auto cube2 = TpGameObject::createGameObject(tpDevice, layout, roomModel);
+  cube2.transform.translation = {-1.7,1,4};
+  cube2.transform.scale = {1,1,1};
+  cube2.transform.rotation.x = glm::radians<float>(90);
+  gameObjects.push_back(std::move(cube2));
 }
 
 }  // namespace teapot
