@@ -21,12 +21,6 @@
 
 namespace teapot {
 
-struct UniformBufferObject {
-  glm::mat4 model;
-  glm::mat4 view;
-  glm::mat4 proj;
-};
-
 class TpRenderer {
 public:
   TpRenderer(TpWindow &window, TpDevice &device);
@@ -41,23 +35,6 @@ public:
     return commandBuffers[currentFrameIndex];
   }
 
-  VkBuffer getCurrentUniformBuffer() const {
-    assert(isFrameStarted && "Frame needs to start");
-    return uniformBuffers[currentFrameIndex];
-  }
-
-  VkBuffer getCurrentUboBuffer() const {
-    return uniformBuffers[currentFrameIndex];
-  }
-
-  VmaAllocation getCurrentUboAllocation() const {
-    return uniformBufferAllocations[currentFrameIndex];
-  }
-
-  VkDescriptorSet getCurrentDescriptorSet() const {
-    return descriptorSets[currentFrameIndex];
-  }
-
   int getFrameIndex() const {
     assert(isFrameStarted && "Can not get this if frame is not in progress");
     return currentFrameIndex;
@@ -65,10 +42,6 @@ public:
 
   VkRenderPass getSwapChainRenderPass() const {
     return tpSwapChain->getRenderPass();
-  }
-
-  VkDescriptorSetLayout getDescriptorSetLayout() const {
-    return descriptorSetLayout;
   }
 
   float getAspectRatio() const {
@@ -83,13 +56,6 @@ public:
 private:
   void createCommandBuffers();
   void freeCommandBuffers();
-  void createUniformBuffers();
-  void freeUniformBuffers();
-
-  void createDescriptorPool();
-  void createDescriptorSets();
-  void destroyDescriptorPool();
-  void createDescriptorSetLayout();
 
   void recreateSwapChain();
   teapot::TpWindow &tpWindow;
@@ -97,12 +63,6 @@ private:
   teapot::TpDevice &tpDevice;
   std::unique_ptr<teapot::TpSwapChain> tpSwapChain;
   std::vector<VkCommandBuffer> commandBuffers;
-  std::vector<VkBuffer> uniformBuffers;
-  std::vector<VmaAllocation> uniformBufferAllocations;
-
-  VkDescriptorSetLayout descriptorSetLayout{};
-  VkDescriptorPool descriptorPool;
-  std::vector<VkDescriptorSet> descriptorSets;
 
   uint32_t currentImageIndex = 0;
   int currentFrameIndex = 0;

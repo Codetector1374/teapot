@@ -15,16 +15,17 @@ namespace tpApp {
 using namespace teapot;
 
 FirstApp::FirstApp() {
-  loadGameObjects();
 }
 
 FirstApp::~FirstApp() = default;
 
 void FirstApp::run() {
   SimpleRenderSystem simpleRenderSystem{tpDevice,
-                                        tpRenderer.getSwapChainRenderPass(), tpRenderer.getDescriptorSetLayout()};
+                                        tpRenderer.getSwapChainRenderPass()};
   TpCamera camera{};
   camera.setViewDirection(glm::vec3{0.f, 0.f, 0.f}, glm::vec3{0.0, 0.f, 1.f});
+
+  loadGameObjects(simpleRenderSystem.getDescriptorSetLayout());
 
   while (!tpWindow.shouldClose()) {
     glfwPollEvents();
@@ -33,9 +34,7 @@ void FirstApp::run() {
 
     if (auto commandBuffer = tpRenderer.beginFrame()) {
       tpRenderer.beginSwapChainRenderPass(commandBuffer);
-      simpleRenderSystem.renderGameObjects(commandBuffer,
-                                           tpRenderer.getCurrentUboBuffer(), tpRenderer.getCurrentUboAllocation(),
-                                           tpRenderer.getCurrentDescriptorSet(),
+      simpleRenderSystem.renderGameObjects(tpRenderer.getFrameIndex(), commandBuffer,
                                            gameObjects, camera);
       tpRenderer.endSwapChainRenderPass(commandBuffer);
       tpRenderer.endFrame();
@@ -47,44 +46,46 @@ void FirstApp::run() {
 }
 
 // temporary helper function, creates a 1x1x1 cube centered at offset
-std::unique_ptr<TpModel> createCubeModel(TpDevice& device, glm::vec3 offset) {
-  std::vector<Vertex> vertices {
-          {{0,0,0}, {1,0,0}},
-          {{0.5,0,0}, {1,0,0}},
-          {{0.5,0.5,0}, {1,0,0}},
-          {{0.0,0.5,0}, {1,0,0}},
+//std::unique_ptr<TpModel> createCubeModel(TpDevice& device, glm::vec3 offset) {
+//  std::vector<Vertex> vertices {
+//          {{0,0,0}, {1,0,0}},
+//          {{0.5,0,0}, {1,0,0}},
+//          {{0.5,0.5,0}, {1,0,0}},
+//          {{0.0,0.5,0}, {1,0,0}},
+//
+//          {{0.25,0.25,1}, {1,1,0}},
+//          {{0.75,0.25,1}, {1,1,0}},
+//          {{0.75,0.75,1}, {1,1,0}},
+//          {{0.25,0.75,1}, {1,1,0}},
+//  };
+//  for (auto& v : vertices) {
+//    v.position += offset;
+//  }
+//  std::vector<uint32_t> indexLMAO {
+//    0,1,3,
+//    1,2,3,
+//
+//    4,5,7,
+//    5,6,7,
+//  };
+//  return std::make_unique<TpModel>(device, vertices, indexLMAO, "");
+//}
 
-          {{0.25,0.25,1}, {1,1,0}},
-          {{0.75,0.25,1}, {1,1,0}},
-          {{0.75,0.75,1}, {1,1,0}},
-          {{0.25,0.75,1}, {1,1,0}},
-  };
-  for (auto& v : vertices) {
-    v.position += offset;
-  }
-  std::vector<uint32_t> indexLMAO {
-    0,1,3,
-    1,2,3,
-
-    4,5,7,
-    5,6,7,
-  };
-  return std::make_unique<TpModel>(device, vertices, indexLMAO);
-}
-
-void FirstApp::loadGameObjects() {
+void FirstApp::loadGameObjects(VkDescriptorSetLayout layout) {
 //  std::shared_ptr<TpModel> tpModel = createCubeModel(tpDevice, {0,0,0});
-  std::shared_ptr<TpModel> tpModel = TpModel::loadObjFile(tpDevice, "../../demoApp/models/scene.obj");
-  auto cube = TpGameObject::createGameObject();
-  cube.model = tpModel;
+  std::shared_ptr<TpModel> tpModel = TpModel::loadObjFile(tpDevice, "../../demoApp/models/chest/chest.obj",
+                                                          "../../demoApp/models/chest/Scene_-_Root_baseColor.png");
+  auto cube = TpGameObject::createGameObject(tpDevice, layout, tpModel);
   cube.transform.translation = {0,0,2};
-  cube.transform.scale = {0.003,0.003,0.003};
+  cube.transform.scale = {0.2,0.2,0.2};
   cube.transform.rotation.z = glm::radians<float>(180);
   gameObjects.push_back(std::move(cube));
 
-
-
-
+//  auto cube2 = TpGameObject::createGameObject(tpDevice, layout, tpModel);
+//  cube2.transform.translation = {-0.5,0,2};
+//  cube2.transform.scale = {0.2,0.2,0.2};
+//  cube2.transform.rotation.z = glm::radians<float>(0);
+//  gameObjects.push_back(std::move(cube2));
 }
 
 }  // namespace teapot

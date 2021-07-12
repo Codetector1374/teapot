@@ -27,7 +27,7 @@ class FirstApp {
   void run();
 
  private:
-  void loadGameObjects();
+  void loadGameObjects(VkDescriptorSetLayout layout);
 
   teapot::TpWindow tpWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
   teapot::TpDevice tpDevice{tpWindow};

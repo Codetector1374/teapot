@@ -19,31 +19,35 @@ namespace teapot {
 
 class SimpleRenderSystem {
 public:
-  SimpleRenderSystem(TpDevice &device, VkRenderPass renderPass, VkDescriptorSetLayout descLayout);
+  SimpleRenderSystem(TpDevice &device, VkRenderPass renderPass);
   ~SimpleRenderSystem();
 
   SimpleRenderSystem(const SimpleRenderSystem &) = delete;
   SimpleRenderSystem &operator=(const SimpleRenderSystem &) = delete;
 
+  VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
+
   void run();
 
-  void renderGameObjects(VkCommandBuffer commandBuffer,
-                         VkBuffer uboBuffer, VmaAllocation uboAllocation,
-                         VkDescriptorSet descSet,
+  void renderGameObjects(int FrameIndex, VkCommandBuffer commandBuffer,
                          std::vector<TpGameObject> &gameObjects, const TpCamera &camera);
-
 private:
-  void createPipelineLayout(VkDescriptorSetLayout descLayout);
+  void createPipelineLayout();
   void createPipeline(VkRenderPass renderPass);
+
+  void createDescriptorSetLayout();
 
   void updateUbo(VkCommandBuffer commandBuffer,
                  VkBuffer uboBuffer, VmaAllocation uboAllocation,
                  VkDescriptorSet descSet,
                  const TpGameObject &obj, const TpCamera &camera);
+
+
   teapot::TpDevice &tpDevice;
   std::unique_ptr<teapot::TpPipeline> tpPipeline;
 
   VkPipelineLayout pipelineLayout{};
+  VkDescriptorSetLayout descriptorSetLayout{};
 };
 }  // namespace teapot
 

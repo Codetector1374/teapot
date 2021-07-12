@@ -9,20 +9,19 @@ namespace teapot {
 TpRenderer::TpRenderer(TpWindow &window, TpDevice &device): tpWindow{window}, tpDevice{device} {
   recreateSwapChain();
 
-  createUniformBuffers();
+//  createUniformBuffers();
 
-  createDescriptorSetLayout();
-  createDescriptorPool();
-  createDescriptorSets();
+//  createDescriptorSetLayout();
+//  createDescriptorPool();
+//  createDescriptorSets();
 
   createCommandBuffers();
 }
 
 TpRenderer::~TpRenderer() {
-  freeUniformBuffers();
   freeCommandBuffers();
-
-  vkDestroyDescriptorSetLayout(tpDevice.device(), descriptorSetLayout, nullptr);
+//  freeUniformBuffers();
+//  vkDestroyDescriptorSetLayout(tpDevice.device(), descriptorSetLayout, nullptr);
 }
 
 void TpRenderer::createCommandBuffers() {
@@ -43,96 +42,6 @@ void TpRenderer::createCommandBuffers() {
 void TpRenderer::freeCommandBuffers() {
   vkFreeCommandBuffers(tpDevice.device(), tpDevice.getCommandPool(), commandBuffers.size(), commandBuffers.data());
   commandBuffers.clear();
-}
-
-void TpRenderer::createUniformBuffers() {
-  VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-
-  uniformBuffers.resize(TpSwapChain::MAX_FRAMES_IN_FLIGHT);
-  uniformBufferAllocations.resize(TpSwapChain::MAX_FRAMES_IN_FLIGHT);
-
-  for(size_t i = 0; i < TpSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
-    tpDevice.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                          VMA_MEMORY_USAGE_CPU_TO_GPU, uniformBuffers[i], uniformBufferAllocations[i]);
-  }
-}
-
-void TpRenderer::freeUniformBuffers() {
-  for(size_t i = 0; i < TpSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
-    vmaFreeMemory(tpDevice.allocator(), uniformBufferAllocations[i]);
-  }
-}
-
-void TpRenderer::createDescriptorPool() {
-  VkDescriptorPoolSize poolSize{};
-  poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  poolSize.descriptorCount = TpSwapChain::MAX_FRAMES_IN_FLIGHT;
-
-  VkDescriptorPoolCreateInfo poolInfo{};
-  poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.poolSizeCount = 1;
-  poolInfo.pPoolSizes = &poolSize;
-  poolInfo.maxSets = TpSwapChain::MAX_FRAMES_IN_FLIGHT;
-
-  if (vkCreateDescriptorPool(tpDevice.device(), &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-    throw std::runtime_error("failed to creating descriptor pool");
-  }
-}
-
-void TpRenderer::destroyDescriptorPool() {
-  vkDestroyDescriptorPool(tpDevice.device(), descriptorPool, nullptr);
-}
-
-void TpRenderer::createDescriptorSets() {
-  std::vector<VkDescriptorSetLayout> layouts(TpSwapChain::MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
-  VkDescriptorSetAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocInfo.descriptorPool = descriptorPool;
-  allocInfo.descriptorSetCount = static_cast<uint32_t>(TpSwapChain::MAX_FRAMES_IN_FLIGHT);
-  allocInfo.pSetLayouts = layouts.data();
-
-  descriptorSets.resize(TpSwapChain::MAX_FRAMES_IN_FLIGHT);
-  if (vkAllocateDescriptorSets(tpDevice.device(), &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate descriptor sets");
-  }
-
-  for (size_t i = 0; i < TpSwapChain::MAX_FRAMES_IN_FLIGHT; i++) {
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = uniformBuffers[i];
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(UniformBufferObject);
-
-    VkWriteDescriptorSet descriptorWrite{};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = descriptorSets[i];
-    descriptorWrite.dstBinding = 0;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrite.descriptorCount = 1;
-    descriptorWrite.pBufferInfo = &bufferInfo;
-    descriptorWrite.pImageInfo = nullptr; // Optional
-    descriptorWrite.pTexelBufferView = nullptr; // Optional
-
-    vkUpdateDescriptorSets(tpDevice.device(), 1, &descriptorWrite, 0, nullptr);
-  }
-}
-
-void TpRenderer::createDescriptorSetLayout() {
-  VkDescriptorSetLayoutBinding uboLayoutBinding{};
-  uboLayoutBinding.binding = 0;
-  uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  uboLayoutBinding.descriptorCount = 1;
-  uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-  uboLayoutBinding.pImmutableSamplers = nullptr;
-
-  VkDescriptorSetLayoutCreateInfo layoutInfo{};
-  layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  layoutInfo.bindingCount = 1;
-  layoutInfo.pBindings = &uboLayoutBinding;
-
-  if (vkCreateDescriptorSetLayout(tpDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create descriptor layout");
-  }
 }
 
 void TpRenderer::recreateSwapChain() {

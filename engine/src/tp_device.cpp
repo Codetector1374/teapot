@@ -424,28 +424,42 @@ void TpDevice::createBuffer(
   bufferInfo.usage = usage;
   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-//  if (vkCreateBuffer(device_, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-//    throw std::runtime_error("failed to create vertex buffer!");
-//  }
+  VmaAllocationCreateInfo vmaCreateInfo{};
+  vmaCreateInfo.usage = vmaUsage;
 
+  vmaCreateBuffer(allocator_, &bufferInfo, &vmaCreateInfo, &buffer, &allocation, nullptr);
+}
+
+void TpDevice::createImageWithInfo(
+        const VkImageCreateInfo &imageInfo,
+        VmaMemoryUsage usage,
+        VkImage &image,
+        VmaAllocation &imageAllocation) {
+
+  VmaAllocationCreateInfo allocationCreateInfo{};
+  allocationCreateInfo.usage = usage;
+
+  vmaCreateImage(allocator_, &imageInfo, &allocationCreateInfo, &image, &imageAllocation, nullptr);
+
+//  if (vkCreateImage(device_, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+//    throw std::runtime_error("failed to create image!");
+//  }
+//
 //  VkMemoryRequirements memRequirements;
-//  vkGetBufferMemoryRequirements(device_, buffer, &memRequirements);
+//  vkGetImageMemoryRequirements(device_, image, &memRequirements);
 //
 //  VkMemoryAllocateInfo allocInfo{};
 //  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 //  allocInfo.allocationSize = memRequirements.size;
 //  allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 //
-//  if (vkAllocateMemory(device_, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-//    throw std::runtime_error("failed to allocate vertex buffer memory!");
+//  if (vkAllocateMemory(device_, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+//    throw std::runtime_error("failed to allocate image memory!");
 //  }
 //
-//  vkBindBufferMemory(device_, buffer, bufferMemory, 0);
-
-  VmaAllocationCreateInfo vmaCreateInfo{};
-  vmaCreateInfo.usage = vmaUsage;
-
-  vmaCreateBuffer(allocator_, &bufferInfo, &vmaCreateInfo, &buffer, &allocation, nullptr);
+//  if (vkBindImageMemory(device_, image, imageMemory, 0) != VK_SUCCESS) {
+//    throw std::runtime_error("failed to bind image memory!");
+//  }
 }
 
 VkCommandBuffer TpDevice::beginSingleTimeCommands() {
@@ -519,30 +533,56 @@ void TpDevice::copyBufferToImage(
   endSingleTimeCommands(commandBuffer);
 }
 
-void TpDevice::createImageWithInfo(
-    const VkImageCreateInfo &imageInfo,
-    VkMemoryPropertyFlags properties,
-    VkImage &image,
-    VkDeviceMemory &imageMemory) {
-  if (vkCreateImage(device_, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create image!");
+void TpDevice::transitionImageLayout(VkImage image, VkFormat format,
+                                     VkImageLayout oldLayout, VkImageLayout newLayout) {
+  VkCommandBuffer cmdBuffer = beginSingleTimeCommands();
+
+  VkImageMemoryBarrier barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = oldLayout;
+  barrier.newLayout = newLayout;
+
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+  barrier.image = image;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  barrier.srcAccessMask = 0; // TODO
+  barrier.dstAccessMask = 0; // TODO
+
+  VkPipelineStageFlags sourceStage;
+  VkPipelineStageFlags destinationStage;
+  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  } else {
+    throw std::invalid_argument("unsupported layout transition!");
   }
 
-  VkMemoryRequirements memRequirements;
-  vkGetImageMemoryRequirements(device_, image, &memRequirements);
+  vkCmdPipelineBarrier(
+          cmdBuffer,
+          sourceStage, destinationStage,
+          0,
+          0, nullptr,
+          0, nullptr,
+          1, &barrier
+  );
 
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-  if (vkAllocateMemory(device_, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate image memory!");
-  }
-
-  if (vkBindImageMemory(device_, image, imageMemory, 0) != VK_SUCCESS) {
-    throw std::runtime_error("failed to bind image memory!");
-  }
+  endSingleTimeCommands(cmdBuffer);
 }
 
 void TpDevice::initializeAllocator() {
@@ -553,6 +593,26 @@ void TpDevice::initializeAllocator() {
   allocatorInfo.instance = instance;
 
   vmaCreateAllocator(&allocatorInfo, &allocator_);
+}
+
+VkImageView TpDevice::createImageView(VkImage image, VkFormat format) {
+  VkImageViewCreateInfo viewInfo{};
+  viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  viewInfo.image = image;
+  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  viewInfo.format = format;
+  viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  viewInfo.subresourceRange.baseMipLevel = 0;
+  viewInfo.subresourceRange.levelCount = 1;
+  viewInfo.subresourceRange.baseArrayLayer = 0;
+  viewInfo.subresourceRange.layerCount = 1;
+
+  VkImageView imageView;
+  if (vkCreateImageView(device_, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create texture image view!");
+  }
+
+  return imageView;
 }
 
 }  // namespace teapot
